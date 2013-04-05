@@ -4,7 +4,7 @@
 #include <gmpxx.h>
 #include <ctime>
 
-//11
+
 using namespace std;
 
 double eps = 1e-5;
