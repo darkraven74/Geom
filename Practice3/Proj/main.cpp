@@ -1,106 +1,147 @@
+#include <gtest/gtest.h>
 #include <iostream>
-#include <cassert>
-#include <boost/chrono.hpp>
 #include <gmpxx.h>
-#include <ctime>
-
-
+#include "cg/primitives/point.h"
+#include "cg/primitives/range.h"
+#include "cg/primitives/segment.h"
+#include <cg/operations/orientation.h>
+using namespace cg;
 using namespace std;
 
-double eps = 1e-5;
-template<class Scalar>
-struct point_2t
+template <class Scalar>
+bool between(point_2t<Scalar> const& a, point_2t<Scalar> const& b,
+             point_2t<Scalar> const& c)
 {
-    Scalar x, y;
-    point_2t(Scalar _x, Scalar _y)
+    if (b == a)
     {
-        x = _x;
-        y = _y;
+        return (c == a);
     }
-
-};
-
-
-template<class Scalar>
-int orientation(point_2t<Scalar> a, point_2t<Scalar> b, point_2t<Scalar> c)
-{
-    point_2t<Scalar> p1(b.x - a.x, b.y - a.y);
-    point_2t<Scalar> p2(c.x - a.x, c.y - a.y);
-    Scalar ans = p1.x * p2.y - p2.x * p1.y;
-    if (ans > 0)
-    {
-        return 1;
-    }
-    if (ans < 0)
-    {
-        return -1;
-    }
-    return 0;
+    Scalar t = (c.x - a.x) / (b.x - a.x);
+    return ((t <= 1) && (t >= 0)) ? true : false;
 }
 
 
-
-void test1()
+template <class Scalar>
+bool intersect(segment_2t<Scalar> const& a, segment_2t<Scalar> const& b)
 {
-    double x1, x2, x3, y1, y2, y3;
-    srand(time(0));
-    int id = 0;
-    for (int i = 0; i < 10; i++)
+    point_2t<Scalar> p1 = a[0];
+    point_2t<Scalar> p2 = a[1];
+    point_2t<Scalar> p3 = b[0];
+    point_2t<Scalar> p4 = b[1];
+
+    if (!between(p1, p2, p3) && !between(p1, p2, p4))
     {
-
-        x1 = (double)rand();
-        x2 = (double)rand();
-        y1 = (double)rand();
-        y2 = (double)rand();
-
-        for (int j = 0; j < 5000; j++)
-        {
-            double t = (double)rand();
-            x3 = t*x1 + x2*(1-t);
-            y3 = t*y1 + y2*(1-t);
-            id++;
-            point_2t<double> a(x1, y1);
-            point_2t<double> b(x2, y2);
-            point_2t<double> c(x3, y3);
-
-            point_2t<mpq_class> a2(x1, y1);
-            point_2t<mpq_class> b2(x2, y2);
-            point_2t<mpq_class> c2(x3, y3);
-
-
-            int ans = orientation(a, b, c);
-            int ans2 = orientation(a2, b2, c2);
-            if (ans != ans2)
-            {
-                cout << "YEAH!! " << ans << " " << ans2  << " " << id << endl;
-                return;
-            }
-
-        }
-
+        return false;
     }
 
+    if (between(p1, p2, p4))
+    {
+        swap(p4, p3);
+    }
 
+    int temp = orientation(p1, p2, p3);
+
+    if (temp == 0)
+    {
+        return true;
+    }
+
+    if ((orientation(p1, p2, p4) != temp) && (orientation(p3, p2, p4) != temp)
+            && ((orientation(p3, p1, p4) == temp) || (orientation(p3, p1, p4) == 0)))
+    {
+            return true;
+    }
+    return false;
 }
 
 
-
-void test()
+TEST(test_intersect, 1)
 {
-    test1();
+    segment_2t<double> s1(point_2t<double>(1, 0), point_2t<double>(5, 0));
+    segment_2t<double> s2(point_2t<double>(10, 10), point_2t<double>(10, -10));
+    EXPECT_EQ(false, intersect(s1, s2));
 }
 
-int main()
+TEST(test_intersect, 2)
 {
-    boost::chrono::system_clock::time_point start = boost::chrono::system_clock::now();
-
-
-
-    test();
-
-
-
-    boost::chrono::duration<double> sec = boost::chrono::system_clock::now() - start;
-    cout << "Time: " << sec.count() << endl;
-    return 0;
+    segment_2t<double> s1(point_2t<double>(1, 0), point_2t<double>(5, 0));
+    segment_2t<double> s2(point_2t<double>(3, 10), point_2t<double>(3, -10));
+    EXPECT_EQ(true, intersect(s1, s2));
 }
+
+TEST(test_intersect, 3)
+{
+    segment_2t<double> s1(point_2t<double>(3, 3), point_2t<double>(1, 1));
+    segment_2t<double> s2(point_2t<double>(5, 5), point_2t<double>(4, 4));
+    EXPECT_EQ(false, intersect(s1, s2));
+}
+
+TEST(test_intersect, 4)
+{
+    segment_2t<double> s1(point_2t<double>(3, 3), point_2t<double>(1, 1));
+    segment_2t<double> s2(point_2t<double>(2, 2), point_2t<double>(4, 4));
+   EXPECT_EQ(true, intersect(s1, s2));
+}
+
+TEST(test_intersect, 5)
+{
+    segment_2t<double> s1(point_2t<double>(1, 1), point_2t<double>(5, 5));
+    segment_2t<double> s2(point_2t<double>(4, 4), point_2t<double>(3, -7));
+    EXPECT_EQ(true, intersect(s1, s2));
+}
+
+TEST(test_intersect, 6)
+{
+    segment_2t<double> s1(point_2t<double>(1, 0), point_2t<double>(5, 0));
+    segment_2t<double> s2(point_2t<double>(3, 7), point_2t<double>(3, 10));
+    EXPECT_EQ(false, intersect(s1, s2));
+}
+
+TEST(test_intersect, 7)
+{
+    segment_2t<double> s1(point_2t<double>(1, 0), point_2t<double>(5, 0));
+    segment_2t<double> s2(point_2t<double>(7, 7), point_2t<double>(10, 10));
+    EXPECT_EQ(false, intersect(s1, s2));
+}
+
+TEST(test_intersect, 8)
+{
+    segment_2t<double> s1(point_2t<double>(1, 0), point_2t<double>(5, 0));
+    segment_2t<double> s2(point_2t<double>(5, 0), point_2t<double>(5, 10));
+    EXPECT_EQ(true, intersect(s1, s2));
+}
+
+TEST(test_intersect, 9)
+{
+    segment_2t<double> s1(point_2t<double>(1, 1), point_2t<double>(5, 5));
+    segment_2t<double> s2(point_2t<double>(7, 7), point_2t<double>(7, 7));
+    EXPECT_EQ(false, intersect(s1, s2));
+}
+
+TEST(test_intersect, 10)
+{
+    segment_2t<double> s1(point_2t<double>(1, 1), point_2t<double>(5, 5));
+    segment_2t<double> s2(point_2t<double>(4, 4), point_2t<double>(4, 4));
+    EXPECT_EQ(true, intersect(s1, s2));
+}
+
+TEST(test_intersect, 11)
+{
+    segment_2t<double> s1(point_2t<double>(1, 1), point_2t<double>(1, 1));
+    segment_2t<double> s2(point_2t<double>(1, 1), point_2t<double>(1, 1));
+    EXPECT_EQ(true, intersect(s1, s2));
+}
+
+TEST(test_intersect, 12)
+{
+    segment_2t<double> s1(point_2t<double>(1, 1), point_2t<double>(3, 3));
+    segment_2t<double> s2(point_2t<double>(100, 100), point_2t<double>(100, 1));
+    EXPECT_EQ(false, intersect(s1, s2));
+}
+
+int main(int argc, char ** argv)
+{
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+
