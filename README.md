@@ -1,2 +1,2 @@
-Geom
+Computational geometry course
 ====
