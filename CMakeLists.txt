@@ -12,3 +12,4 @@ find_package(GMP)
 include_directories("cg/include" ${GMP_INCLUDE_DIR})
 
 add_subdirectory(Practice3/Proj)
+add_subdirectory(Practice4/Proj)
